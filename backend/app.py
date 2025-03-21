@@ -15,6 +15,9 @@ app.config['SECRET_KEY'] = 'your-secret-key'
 # 初始化SQLAlchemy
 db = SQLAlchemy(app)
 
+#导入模型
+from backend.models import *
+
 # 导入路由（确保在创建app和db之后导入，避免循环导入问题）
 from backend.routes import main_routes
 
