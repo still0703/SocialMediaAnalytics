@@ -26,25 +26,38 @@ class DatabasePipeline:
         adapter = ItemAdapter(item)
 
         if isinstance(item, PostItem):
-            sql = """
-            INSERT INTO posts 
-            (original_id, author, content, post_time, crawled_time, url, likes, comments, shares)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
+            # 检查是否已存在相同URL的帖子
             self.cursor.execute(
-                sql,
-                (
-                    adapter.get('original_id'),
-                    adapter.get('author'),
-                    adapter.get('content'),
-                    adapter.get('post_time'),
-                    adapter.get('crawled_time'),
-                    adapter.get('url'),
-                    adapter.get('likes'),
-                    adapter.get('comments'),
-                    adapter.get('shares')
-                )
+                "SELECT id FROM posts WHERE url = %s",
+                (adapter.get('url'),)
             )
+            existing_post = self.cursor.fetchone()
+
+            if not existing_post:
+                sql = """
+                INSERT INTO posts 
+                (original_id, author, content, post_time, crawled_time, url, likes, comments, shares)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                self.cursor.execute(
+                    sql,
+                    (
+                        adapter.get('original_id'),
+                        adapter.get('author'),
+                        adapter.get('content'),
+                        adapter.get('post_time'),
+                        adapter.get('crawled_time'),
+                        adapter.get('url'),
+                        adapter.get('likes'),
+                        adapter.get('comments'),
+                        adapter.get('shares')
+                    )
+                )
+                self.connection.commit()
+                return item
+            else:
+                spider.logger.info(f"Duplicate post URL found: {adapter.get('url')}")
+                return None
 
         elif isinstance(item, CommentItem):
             # 首先需要找到对应post在数据库中的ID
@@ -56,22 +69,34 @@ class DatabasePipeline:
 
             if post_result:
                 post_id = post_result[0]
-                sql = """
-                INSERT INTO comments 
-                (post_id, author, content, comment_time, crawled_time, likes)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                """
+                # 检查是否已存在相同内容和作者的评论
                 self.cursor.execute(
-                    sql,
-                    (
-                        post_id,
-                        adapter.get('author'),
-                        adapter.get('content'),
-                        adapter.get('comment_time'),
-                        adapter.get('crawled_time'),
-                        adapter.get('likes')
-                    )
+                    "SELECT id FROM comments WHERE post_id = %s AND author = %s AND content = %s",
+                    (post_id, adapter.get('author'), adapter.get('content'))
                 )
+                existing_comment = self.cursor.fetchone()
 
-        self.connection.commit()
+                if not existing_comment:
+                    sql = """
+                    INSERT INTO comments 
+                    (post_id, author, content, comment_time, crawled_time, likes)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """
+                    self.cursor.execute(
+                        sql,
+                        (
+                            post_id,
+                            adapter.get('author'),
+                            adapter.get('content'),
+                            adapter.get('comment_time'),
+                            adapter.get('crawled_time'),
+                            adapter.get('likes')
+                        )
+                    )
+                    self.connection.commit()
+                    return item
+                else:
+                    spider.logger.info(f"Duplicate comment found for post {post_id}")
+                    return None
+
         return item

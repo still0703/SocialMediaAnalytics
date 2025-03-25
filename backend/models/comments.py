@@ -12,6 +12,9 @@ class Comment(db.Model):
     comment_time = db.Column(db.DateTime)  # 评论时间
     crawled_time = db.Column(db.DateTime, default=datetime.utcnow)  # 爬取时间，默认当前时间
     likes = db.Column(db.Integer, default=0)  # 点赞数
+    cleaned_content = db.Column(db.Text)  # 清洗后的文本
+    tokens = db.Column(db.Text)  # 分词结果
+    preprocessed = db.Column(db.Boolean, default=False) # 是否已预处理
 
     def __repr__(self):
         return f"<Comment {self.id} on Post {self.post_id}>"

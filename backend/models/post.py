@@ -15,6 +15,9 @@ class Post(db.Model):
     likes = db.Column(db.Integer, default=0)  # 点赞数
     comments = db.Column(db.Integer, default=0)  # 评论数
     shares = db.Column(db.Integer, default=0)  # 分享数
+    cleaned_content = db.Column(db.Text)  # 清洗后的文本
+    tokens = db.Column(db.Text)  # 分词结果
+    preprocessed = db.Column(db.Boolean, default=False)  # 是否已预处理
 
     def __repr__(self):
         return f"<Post {self.id}: {self.original_id}>"
